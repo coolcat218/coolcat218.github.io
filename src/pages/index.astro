@@ -9,16 +9,8 @@ import portrait from '../assets/portrait.jpg';
   title="Caitlin Chen"
   description="Caitlin Chen — visual art, math, and generative AI. Based in San Francisco, previously New York."
 >
-  <section class="band statement-band" style="padding-bottom: clamp(20px, 3vw, 34px);">
-    <h1 class="statement reveal">Hi, I'm Caitlin. Currently based in San Francisco, previously New York.</h1>
-  </section>
-
-  <!-- Interactive pixel field -->
-  <div class="band--sm" style="padding-top: 0; padding-bottom: clamp(24px, 3.5vw, 44px);">
-    <DotField />
-  </div>
-
-  <div class="band--sm" style="padding-top: 0;">
+  <!-- Portrait, with the page title and bio set against it -->
+  <div class="band">
     <div class="duo">
       <figure class="duo__lead reveal" style="margin: 0;">
         <Image
@@ -33,7 +25,10 @@ import portrait from '../assets/portrait.jpg';
       </figure>
 
       <div class="duo__body reveal d1">
-        <div class="body-copy">
+        <h1 class="statement">Hi, I'm Caitlin.</h1>
+        <p class="subtitle">Currently based in San Francisco, previously New York.</p>
+
+        <div class="body-copy" style="margin-top: clamp(24px, 3vw, 38px);">
           <p>
             I love making and looking at visual art, working my way through brainteasers, and
             finding new music.
@@ -55,5 +50,10 @@ import portrait from '../assets/portrait.jpg';
         </p>
       </div>
     </div>
+  </div>
+
+  <!-- Interactive dot field, sitting between the portrait block and the wordmark -->
+  <div class="band--sm" style="padding-top: 0;">
+    <DotField />
   </div>
 </Base>

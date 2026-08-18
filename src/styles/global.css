@@ -183,6 +183,7 @@ a { color: inherit; text-decoration: none; }
 .hold { max-width: 1600px; margin-inline: auto; }
 
 .statement-band .statement { max-width: 30ch; }
+.duo__body .statement { max-width: none; }
 
 /* ---------- Full-bleed image band with overlaid title ---------- */
 
@@ -307,6 +308,22 @@ a { color: inherit; text-decoration: none; }
   font-variation-settings: 'opsz' 144, 'wght' 330, 'SOFT' 30, 'WONK' 0;
   font-size: 120px;
   fill: var(--ink);
+}
+
+/* ---------- Page title + subtitle ---------- */
+
+/* Serif, so it reads as part of the title rather than as body copy, but well
+   below the h1 in size. */
+.subtitle {
+  font-family: var(--serif);
+  font-variation-settings: var(--vf-serif);
+  font-size: clamp(1.05rem, 1.5vw, 1.375rem);
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  color: var(--ink-60);
+  margin: 0.5em 0 0;
+  max-width: 26ch;
+  font-weight: 400;
 }
 
 /* ---------- Editorial two-column text ---------- */
