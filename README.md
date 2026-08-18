@@ -88,23 +88,53 @@ public/
 
 ## Deploying
 
-The build output is a plain folder of HTML. Any of these work; Cloudflare Pages and
-Netlify both have a free tier that is more than enough.
+Live at **https://coolcat218.github.io** — pushed to `main`, built by GitHub Actions
+(`.github/workflows/deploy.yml`), served by GitHub Pages. Pages is set to `build_type:
+workflow`, so the deployed site is the built `dist/`, not the source tree.
 
-- Build command: `pnpm build`
-- Output directory: `dist`
-- Node version: 24
+Every push to `main` redeploys. Nothing else to run.
 
 ### Pointing caitlinkchen.com at it
 
-The domain is registered at **Namecheap**; only the nameservers currently point at Wix
-(`ns0.wixdns.net` / `ns1.wixdns.net`). So there is nothing to transfer — just repoint DNS:
+The domain is registered at **Namecheap**; only the nameservers point at Wix
+(`ns0.wixdns.net` / `ns1.wixdns.net`), so there is nothing to transfer — just move DNS.
 
-1. Deploy first and confirm the site works on the host's own URL.
-2. Add `caitlinkchen.com` and `www.caitlinkchen.com` as custom domains on the host.
-3. In Namecheap, set the domain's nameservers to the ones the host gives you
-   (or, if you'd rather keep Namecheap's DNS, switch to Namecheap BasicDNS and add the
-   host's `A`/`CNAME` records instead).
-4. Wait for propagation, confirm HTTPS is issued, then cancel the Wix plan.
+Do it in this order, or the site goes dark mid-way:
 
-Do step 4 last — while the nameservers still point at Wix, Wix is serving the live site.
+1. **Namecheap → Domain List → caitlinkchen.com → Nameservers**: switch from Custom DNS
+   to **Namecheap BasicDNS**. This is the step that takes the domain away from Wix.
+2. **Advanced DNS**, add these records (GitHub Pages, verified 2026-08-18):
+
+   | Type  | Host | Value |
+   | ----- | ---- | ----- |
+   | A     | @    | 185.199.108.153 |
+   | A     | @    | 185.199.109.153 |
+   | A     | @    | 185.199.110.153 |
+   | A     | @    | 185.199.111.153 |
+   | CNAME | www  | coolcat218.github.io. |
+
+   Optionally add the IPv6 AAAA records for `@` too: `2606:50c0:8000::153`,
+   `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153`.
+
+3. Wait for propagation. Check with `dig +short caitlinkchen.com A` — you want the
+   `185.199.x.153` set, not Wix's `185.230.63.x`.
+4. Tell GitHub about the domain, which also writes the `CNAME` file the Actions deploy
+   needs so the setting survives future builds:
+
+   ```bash
+   echo 'caitlinkchen.com' > public/CNAME
+   git add public/CNAME && git commit -m "Add custom domain" && git push
+   gh api -X PUT repos/coolcat218/coolcat218.github.io/pages -f 'cname=caitlinkchen.com'
+   gh api -X POST repos/coolcat218/coolcat218.github.io/pages/https --silent  # enforce HTTPS
+   ```
+
+   Don't do this before step 3 — setting the custom domain makes
+   `coolcat218.github.io` redirect to `caitlinkchen.com`, so if DNS still points at Wix
+   you lose the working preview.
+5. Confirm `https://caitlinkchen.com` loads and the certificate is valid, **then**
+   cancel the Wix plan. While the nameservers point at Wix, Wix is the live site.
+
+### If you'd rather not use GitHub Pages
+
+The build output is a plain folder of HTML, so Cloudflare Pages, Netlify and Vercel all
+work: build command `pnpm build`, output directory `dist`, Node 24.
