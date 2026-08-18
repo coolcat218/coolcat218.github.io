@@ -320,7 +320,7 @@ a { color: inherit; text-decoration: none; }
   font-size: clamp(1.05rem, 1.5vw, 1.375rem);
   line-height: 1.25;
   letter-spacing: 0.01em;
-  color: var(--ink-60);
+  color: var(--ink);
   margin: 0.5em 0 0;
   max-width: 26ch;
   font-weight: 400;
@@ -338,6 +338,12 @@ a { color: inherit; text-decoration: none; }
 @media (min-width: 900px) {
   .duo__lead { grid-column: 1 / span 6; }
   .duo__body { grid-column: 8 / span 5; }
+
+  /* Homepage intro only. The project pages use .duo with a text lead, where a
+     smaller first column and centred alignment would both be wrong. */
+  .duo--intro { align-items: center; }
+  .duo--intro .duo__lead { grid-column: 1 / span 4; }
+  .duo--intro .duo__body { grid-column: 6 / span 7; }
 }
 
 /* ---------- Metadata list ---------- */
