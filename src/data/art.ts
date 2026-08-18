@@ -9,9 +9,10 @@
  * `col` is a CSS grid-column on a 12-column grid — this is what creates the
  * deliberate asymmetry down the page. Edit freely.
  *
- * `title`, `medium` and `year` are blank on purpose: the old Wix site listed no
- * titles, so nothing has been invented. Fill any of them in and it renders in
- * the caption automatically.
+ * `title`, `medium` and `year` are MISSING, not absent by design. The old Wix site
+ * did caption these pieces, but the captions were rendered client-side and were lost
+ * when this site was rebuilt from the static HTML. They need re-entering from the
+ * Wix editor. Fill any field in and it renders in the caption automatically.
  */
 export interface Plate {
   /** Filename inside src/assets/art/ */

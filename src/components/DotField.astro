@@ -1,0 +1,406 @@
+---
+/**
+ * Interactive watercolor field.
+ *
+ * At rest it is a quiet grid of graphite pixels. As the cursor approaches, each
+ * pixel is pushed outward and blooms into a watercolor spot — random colour,
+ * random irregular edge, layered washes. Spots are composited with `multiply`,
+ * so where two overlap the pigment darkens the way real washes do.
+ *
+ * The blooms are baked once into offscreen sprites at load, then stamped each
+ * frame. Building gradients per dot per frame is what makes this kind of effect
+ * stutter; stamping does not.
+ */
+interface Props {
+  /** Height of the field. Any CSS length. */
+  height?: string;
+  class?: string;
+}
+const { height = 'clamp(210px, 36vh, 470px)', class: klass = '' } = Astro.props;
+---
+
+<div class={`dotfield ${klass}`} style={`--dotfield-h: ${height}`} data-dotfield>
+  <canvas data-dotfield-canvas aria-hidden="true"></canvas>
+  <span class="dotfield__hint ui" data-dotfield-hint>move your cursor</span>
+</div>
+
+<style>
+  .dotfield {
+    position: relative;
+    height: var(--dotfield-h);
+    width: 100%;
+    /* Reacts to the cursor but must never swallow page scrolling on touch. */
+    touch-action: pan-y;
+  }
+  .dotfield canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .dotfield__hint {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    color: var(--ink-60);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+  .dotfield__hint.is-shown {
+    opacity: 1;
+  }
+  /* Touch: the prompt matters more here, since there is no cursor to discover it. */
+</style>
+
+<script>
+  type Dot = {
+    x: number; y: number; ox: number; oy: number; vx: number; vy: number;
+    sprite: number; rot: number; scale: number; phase: number;
+    /** Non-uniform footprint, so stains are not all circles. */
+    ax: number; ay: number;
+    /** Current bloom, 0..1. Rises with proximity, then dries slowly. */
+    wet: number;
+  };
+
+  const root = document.querySelector<HTMLElement>('[data-dotfield]');
+  const canvas = root?.querySelector<HTMLCanvasElement>('[data-dotfield-canvas]');
+  const hint = root?.querySelector<HTMLElement>('[data-dotfield-hint]');
+
+  if (root && canvas) {
+    const ctx = canvas.getContext('2d')!;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* Tuned for a wide band; scaled down on narrow screens by tune(). */
+    let SPACING = 58;
+    let RADIUS = 120;
+    let BLOOM = 132;
+    const PUSH = 9;
+    const STIFFNESS = 0.05;
+    const DAMPING = 0.87;
+    const R_BASE = 1.2;
+    /** How fast a spot dries once the cursor moves on. Closer to 1 = longer stain. */
+    const DRY = 0.961;
+    /** Watercolor spot diameter at full bloom, in CSS px. */
+    /** Below this heat a dot stays a plain pixel — keeps the grid legible. */
+    const BLOOM_GATE = 0.035;
+
+    /* Muted washes: present enough to read as paint, restrained enough for a
+       white editorial page. */
+    const PALETTE: [number, number, number][] = [
+      [ 62,  86, 148], // indigo
+      [ 46, 122, 148], // cerulean
+      [ 96, 132,  86], // sap green
+      [176, 126,  58], // raw sienna
+      [166,  74,  86], // madder rose
+      [116,  92, 148], // violet
+    ];
+
+    const SPRITE_PX = 128;
+    const SHAPES = 4;
+    const sprites: HTMLCanvasElement[] = [];
+
+    let dots: Dot[] = [];
+    let w = 0, h = 0, dpr = 1;
+    let px = -9999, py = -9999, tx = -9999, ty = -9999;
+    let pointerSeen = false;
+    let raf = 0, running = false, t = 0;
+
+    /** Deterministic PRNG so a reload looks the same and shapes stay stable. */
+    function mulberry(seed: number) {
+      return function () {
+        seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+        let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+        return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    /** One watercolor spot, baked: wobbly contour, layered washes, dark rim. */
+    function bakeSprite(color: [number, number, number], seed: number) {
+      const c = document.createElement('canvas');
+      c.width = c.height = SPRITE_PX * 2;
+      const g = c.getContext('2d')!;
+      g.scale(2, 2);
+      const rnd = mulberry(seed);
+      const cx = SPRITE_PX / 2, cy = SPRITE_PX / 2;
+      const rMax = SPRITE_PX / 2 - 6;
+      const [r, gr, b] = color;
+
+      // Irregular contour: a few harmonics of polar wobble.
+      const harmonics = [
+        { k: 3 + Math.floor(rnd() * 2), amp: 0.13 + rnd() * 0.09, ph: rnd() * 6.283 },
+        { k: 5 + Math.floor(rnd() * 3), amp: 0.05 + rnd() * 0.05, ph: rnd() * 6.283 },
+        { k: 8 + Math.floor(rnd() * 4), amp: 0.02 + rnd() * 0.03, ph: rnd() * 6.283 },
+      ];
+      const contour = (scale: number) => {
+        g.beginPath();
+        for (let a = 0; a <= 64; a++) {
+          const th = (a / 64) * Math.PI * 2;
+          let rr = 1;
+          for (const hm of harmonics) rr += Math.sin(th * hm.k + hm.ph) * hm.amp;
+          const rad = rMax * scale * rr;
+          const x = cx + Math.cos(th) * rad;
+          const y = cy + Math.sin(th) * rad;
+          if (a === 0) g.moveTo(x, y); else g.lineTo(x, y);
+        }
+        g.closePath();
+      };
+
+      // Satellite bleeds: where the wash ran before it dried. Drawn first and
+      // under the body so they read as part of the same stain.
+      const sats: { x: number; y: number; r: number }[] = [];
+      for (let i = 0; i < 2; i++) {
+        const ang = rnd() * Math.PI * 2;
+        const off = rMax * (0.4 + rnd() * 0.35);
+        sats.push({
+          x: cx + Math.cos(ang) * off,
+          y: cy + Math.sin(ang) * off,
+          r: rMax * (0.3 + rnd() * 0.26),
+        });
+      }
+      for (const sa of sats) {
+        const sg = g.createRadialGradient(sa.x, sa.y, 0, sa.x, sa.y, sa.r);
+        sg.addColorStop(0, `rgba(${r},${gr},${b},0.26)`);
+        sg.addColorStop(0.8, `rgba(${r},${gr},${b},0.2)`);
+        sg.addColorStop(1, `rgba(${r},${gr},${b},0)`);
+        g.fillStyle = sg;
+        g.beginPath();
+        g.arc(sa.x, sa.y, sa.r, 0, Math.PI * 2);
+        g.fill();
+      }
+
+      // Body: soft radial falloff, so the edge dissolves instead of stopping.
+      const grad = g.createRadialGradient(cx, cy, 0, cx, cy, rMax);
+      grad.addColorStop(0, `rgba(${r},${gr},${b},0.34)`);
+      grad.addColorStop(0.62, `rgba(${r},${gr},${b},0.32)`);
+      grad.addColorStop(0.88, `rgba(${r},${gr},${b},0.26)`);
+      grad.addColorStop(0.97, `rgba(${r},${gr},${b},0.12)`);
+      grad.addColorStop(1, `rgba(${r},${gr},${b},0)`);
+      contour(1);
+      g.fillStyle = grad;
+      g.fill();
+
+      // Interior washes: uneven pigment density, the tell of a real wash.
+      for (let i = 0; i < 5; i++) {
+        const ox = (rnd() - 0.5) * rMax * 0.5;
+        const oy = (rnd() - 0.5) * rMax * 0.5;
+        const rad = rMax * (0.28 + rnd() * 0.36);
+        const gg = g.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, rad);
+        gg.addColorStop(0, `rgba(${r},${gr},${b},0.16)`);
+        gg.addColorStop(1, `rgba(${r},${gr},${b},0)`);
+        g.fillStyle = gg;
+        g.beginPath();
+        g.arc(cx + ox, cy + oy, rad, 0, Math.PI * 2);
+        g.fill();
+      }
+
+      // Edge darkening: pigment creeping to the rim as the water dries.
+      g.save();
+      g.globalCompositeOperation = 'source-atop';
+      contour(0.985);
+      g.strokeStyle = `rgba(${r},${gr},${b},0.34)`;
+      g.lineWidth = 3.2;
+      g.stroke();
+      g.restore();
+
+      return c;
+    }
+
+    function bakeAll() {
+      sprites.length = 0;
+      let seed = 1;
+      for (const col of PALETTE) {
+        for (let s = 0; s < SHAPES; s++) sprites.push(bakeSprite(col, seed++ * 7919));
+      }
+    }
+
+    /** Density and reach have to track width, or a phone gets five specks. */
+    function tune(width: number) {
+      if (width < 560) {
+        SPACING = 34;
+        RADIUS = 88;
+        BLOOM = 86;
+      } else if (width < 900) {
+        SPACING = 46;
+        RADIUS = 104;
+        BLOOM = 110;
+      } else {
+        SPACING = 58;
+        RADIUS = 120;
+        BLOOM = 132;
+      }
+    }
+
+    function build() {
+      const rect = root!.getBoundingClientRect();
+      tune(rect.width);
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = Math.max(1, Math.round(rect.width));
+      h = Math.max(1, Math.round(rect.height));
+      canvas!.width = Math.round(w * dpr);
+      canvas!.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const cols = Math.max(2, Math.floor((w - SPACING) / SPACING));
+      const rows = Math.max(2, Math.floor((h - SPACING) / SPACING));
+      const offX = (w - (cols - 1) * SPACING) / 2;
+      const offY = (h - (rows - 1) * SPACING) / 2;
+
+      const rnd = mulberry(20260818);
+      dots = [];
+      for (let j = 0; j < rows; j++) {
+        for (let i = 0; i < cols; i++) {
+          const x = offX + i * SPACING;
+          const y = offY + j * SPACING;
+          dots.push({
+            x, y, ox: x, oy: y, vx: 0, vy: 0,
+            wet: 0,
+            sprite: Math.floor(rnd() * sprites.length),
+            rot: rnd() * Math.PI * 2,
+            scale: 0.78 + rnd() * 0.52,
+            ax: 0.82 + rnd() * 0.36,
+            ay: 0.82 + rnd() * 0.36,
+            phase: rnd() * 6.283,
+          });
+        }
+      }
+    }
+
+    function drawPixels() {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(0,0,0,0.24)';
+      for (const d of dots) {
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, R_BASE, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /** Resting state — also what a reduced-motion visitor gets. */
+    function paintStatic() {
+      ctx.clearRect(0, 0, w, h);
+      for (const d of dots) { d.x = d.ox; d.y = d.oy; }
+      drawPixels();
+    }
+
+    function frame() {
+      t += 0.01;
+      px += (tx - px) * 0.18;
+      py += (ty - py) * 0.18;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Pass 1: pixels, plain compositing.
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(0,0,0,0.24)';
+      const blooms: { d: Dot; heat: number }[] = [];
+
+      for (const d of dots) {
+        const driftAmp = pointerSeen ? 0.5 : 1.6;
+        const drift = Math.sin(t + d.ox * 0.012 + d.oy * 0.016 + d.phase) * driftAmp;
+
+        const dx = d.x - px;
+        const dy = d.y - py;
+        const dist = Math.hypot(dx, dy);
+
+        let ax = 0, ay = 0, heat = 0;
+        if (dist < RADIUS && dist > 0.001) {
+          heat = 0.5 + 0.5 * Math.cos((dist / RADIUS) * Math.PI);
+          const force = heat * PUSH;
+          ax = (dx / dist) * force;
+          ay = (dy / dist) * force;
+        }
+
+        d.vx = (d.vx + (d.ox + ax + drift - d.x) * STIFFNESS) * DAMPING;
+        d.vy = (d.vy + (d.oy + ay + drift * 0.6 - d.y) * STIFFNESS) * DAMPING;
+        d.x += d.vx;
+        d.y += d.vy;
+
+        // Wet fast, dry slow — that asymmetry is what makes it read as paint.
+        d.wet = Math.max(heat, d.wet * DRY);
+
+        if (d.wet > BLOOM_GATE) {
+          blooms.push({ d, heat: d.wet });
+        } else {
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, R_BASE, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Pass 2: watercolor, multiplied so overlaps deepen.
+      ctx.globalCompositeOperation = 'multiply';
+      for (const { d, heat } of blooms) {
+        // Ease-in so a spot opens like water spreading, not like a fade.
+        const e = Math.pow(heat, 1.35);
+        const size = BLOOM * d.scale * (0.62 + e * 0.38);
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rot + e * 0.25);
+        ctx.scale(d.ax, d.ay);
+        ctx.globalAlpha = Math.min(1, e * 1.15);
+        ctx.drawImage(sprites[d.sprite], -size / 2, -size / 2, size, size);
+        ctx.restore();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+
+      raf = requestAnimationFrame(frame);
+    }
+
+    function start() {
+      if (running || reduced) return;
+      running = true;
+      raf = requestAnimationFrame(frame);
+    }
+    function stop() {
+      running = false;
+      cancelAnimationFrame(raf);
+    }
+
+    function toLocal(clientX: number, clientY: number) {
+      const rect = canvas!.getBoundingClientRect();
+      tx = clientX - rect.left;
+      ty = clientY - rect.top;
+      if (!pointerSeen) {
+        pointerSeen = true;
+        hint?.classList.remove('is-shown');
+        px = tx; py = ty;
+      }
+    }
+
+    root.addEventListener('pointermove', (e) => toLocal(e.clientX, e.clientY));
+    root.addEventListener('pointerdown', (e) => toLocal(e.clientX, e.clientY));
+    root.addEventListener('pointerleave', () => { tx = -9999; ty = -9999; });
+
+    const ro = new ResizeObserver(() => {
+      build();
+      if (!running) paintStatic();
+    });
+    ro.observe(root);
+
+    const io = new IntersectionObserver(
+      (entries) => { for (const e of entries) e.isIntersecting ? start() : stop(); },
+      { threshold: 0.01 }
+    );
+    io.observe(root);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+      else io.observe(root);
+    });
+
+    const touch = window.matchMedia('(hover: none)').matches;
+    if (touch && hint) hint.textContent = 'drag to paint';
+
+    bakeAll();
+    build();
+    // rAF is paused in background tabs — draw the resting grid now so the field
+    // is never a blank gap.
+    paintStatic();
+    if (!reduced) {
+      start();
+      setTimeout(() => { if (!pointerSeen) hint?.classList.add('is-shown'); }, 1100);
+    }
+  }
+</script>

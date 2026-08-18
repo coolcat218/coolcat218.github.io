@@ -1,50 +1,22 @@
 ---
-import { Image } from 'astro:assets';
-import Base from '../layouts/Base.astro';
-import portrait from '../assets/portrait.jpg';
+/**
+ * The about content is the homepage now. This keeps any existing /about link
+ * (old Wix inbound links, someone's bookmark) landing in the right place
+ * instead of on a 404. Static hosts can't send a 301, so this is the
+ * meta-refresh + canonical equivalent.
+ */
 ---
 
-<Base title="About — Caitlin Chen" description="Caitlin Chen — Applied Math, Harvard. Based in San Francisco, previously New York.">
-  <section class="band statement-band" style="padding-bottom: clamp(30px, 4vw, 50px);">
-    <h1 class="statement reveal">Hi, I'm Caitlin. Currently based in San Francisco, previously New York.</h1>
-  </section>
-
-  <div class="band--sm" style="padding-top: 0;">
-    <div class="duo">
-      <figure class="duo__lead reveal" style="margin: 0;">
-        <Image
-          src={portrait}
-          alt="Portrait of Caitlin Chen"
-          widths={[420, 760, 1025]}
-          width={1025}
-          sizes="(max-width: 900px) 92vw, 46vw"
-          quality={82}
-          style="width: 100%;"
-        />
-      </figure>
-
-      <div class="duo__body reveal d1">
-        <div class="body-copy">
-          <p>
-            I love making and looking at visual art, working my way through brainteasers, and
-            finding new music.
-          </p>
-          <p>
-            I'm excited about the implications of generative AI for augmenting and broadening
-            human creativity. I'm especially interested in the intersection of science, art,
-            and technology.
-          </p>
-          <p>
-            I graduated with honors in Applied Math from Harvard and have a background in
-            investment banking.
-          </p>
-        </div>
-        <p style="margin: clamp(24px, 3vw, 36px) 0 0; display: flex; gap: 10px; flex-wrap: wrap;">
-          <a class="pill" href="mailto:caitlin.chen11@gmail.com">get in touch</a>
-          <a class="pill" href="/work">work</a>
-          <a class="pill" href="/art">visual art</a>
-        </p>
-      </div>
-    </div>
-  </div>
-</Base>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Caitlin Chen</title>
+    <link rel="canonical" href="https://caitlinkchen.com/" />
+    <meta http-equiv="refresh" content="0; url=/" />
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <p>The about page has moved. <a href="/">Continue to caitlinkchen.com</a>.</p>
+  </body>
+</html>
