@@ -1,0 +1,82 @@
+---
+import '../styles/global.css';
+import Masthead from '../components/Masthead.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  colossus?: boolean;
+}
+
+const {
+  title,
+  description = 'Caitlin Chen — visual art, math, and generative AI. Based in San Francisco.',
+  colossus = true,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <link rel="preload" href="/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/geist.woff2" as="font" type="font/woff2" crossorigin />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL('/og.jpg', Astro.site).href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+  </head>
+
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <Masthead />
+    <main id="main">
+      <slot />
+    </main>
+    {colossus && (
+      <svg class="colossus" viewBox="0 0 1000 124" preserveAspectRatio="xMidYMid meet" role="presentation" aria-hidden="true">
+        <text x="500" y="100" text-anchor="middle" textLength="992" lengthAdjust="spacingAndGlyphs">
+          CAITLIN CHEN
+        </text>
+      </svg>
+    )}
+    <Footer />
+
+    <script>
+      const targets = document.querySelectorAll('.reveal');
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-in');
+                io.unobserve(e.target);
+              }
+            }
+          },
+          { rootMargin: '0px 0px -6% 0px', threshold: 0.05 }
+        );
+        targets.forEach((t) => io.observe(t));
+      } else {
+        targets.forEach((t) => t.classList.add('is-in'));
+      }
+    </script>
+  </body>
+</html>

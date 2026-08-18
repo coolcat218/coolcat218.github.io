@@ -1,0 +1,109 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { workImage } from '../../lib/images';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((p) => ({ params: { slug: p.id }, props: { project: p } }));
+}
+
+const { project } = Astro.props;
+const { Content } = await render(project);
+const d = project.data;
+const hero = d.image ? workImage(d.image) : undefined;
+
+const all = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+const idx = all.findIndex((p) => p.id === project.id);
+const next = all[(idx + 1) % all.length];
+const nextImg = next.data.image ? workImage(next.data.image) : undefined;
+
+// Never repeat the category inside the methods line.
+const methods = d.tools.filter((t) => t.toLowerCase() !== d.category.toLowerCase());
+---
+
+<Base title={`${d.title} — Caitlin Chen`} description={d.summary} colossus={false}>
+  <article>
+    <header class="band" style="padding-bottom: clamp(26px, 3vw, 44px);">
+      <p class="ui ui--muted" style="margin: 0 0 clamp(20px, 2.4vw, 32px);">
+        {String(d.order).padStart(2, '0')} &nbsp;·&nbsp; {d.category}
+      </p>
+      <h1 class="headline reveal" style="max-width: 24ch;">{d.title}</h1>
+    </header>
+
+    <div class="band--sm" style="padding-top: 0;">
+      <div class="duo">
+        <p class="statement duo__lead reveal" style="font-size: clamp(1.4rem, 2.3vw, 2rem);">
+          {d.summary}
+        </p>
+        <div class="duo__body reveal d1">
+          <div class="body-copy"><Content /></div>
+
+          <dl class="meta-list ui" style="margin-top: clamp(26px, 3vw, 40px);">
+            <div>
+              <dt>Category</dt>
+              <dd>{d.category}</dd>
+            </div>
+            {methods.length > 0 && (
+              <div>
+                <dt>Methods</dt>
+                <dd>{methods.join(', ')}</dd>
+              </div>
+            )}
+            {d.year && (
+              <div>
+                <dt>Year</dt>
+                <dd>{d.year}</dd>
+              </div>
+            )}
+            {(d.repo || d.pdf) && (
+              <div>
+                <dt>Files</dt>
+                <dd style="display: flex; gap: 1.2em; flex-wrap: wrap;">
+                  {d.repo && <a href={d.repo} target="_blank" rel="noopener" style="border-bottom: 1px solid var(--hair);">Repository ↗</a>}
+                  {d.pdf && <a href={d.pdf} target="_blank" rel="noopener" style="border-bottom: 1px solid var(--hair);">Read the paper (PDF) ↗</a>}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    {hero && (
+      <figure style="margin: 0; padding: 0 var(--pad) clamp(40px, 6vw, 90px);">
+        <Image
+          src={hero}
+          alt={d.imageDecorative ? '' : (d.imageAlt ?? d.title)}
+          widths={[700, 1100, 1600]}
+          width={1600}
+          sizes="(max-width: 900px) 100vw, 90vw"
+          quality={80}
+          loading="lazy"
+          style="width: 100%;"
+        />
+        {!d.imageDecorative && d.imageAlt && (
+          <figcaption class="ui ui--muted" style="margin-top: 12px;">{d.imageAlt}</figcaption>
+        )}
+      </figure>
+    )}
+  </article>
+
+  <nav aria-label="Next project">
+    <a
+      class={`feature${nextImg && nextImg.width >= 1000 ? '' : ' feature--plain'}`}
+      href={`/work/${next.id}`}
+      style="min-height: clamp(260px, 32vw, 420px);"
+    >
+      {nextImg && nextImg.width >= 1000 && (
+        <Image class="feature__img" src={nextImg} alt="" widths={[800, 1400]} width={1400} sizes="100vw" quality={70} loading="lazy" />
+      )}
+      <span class="feature__inner" style="min-height: clamp(260px, 32vw, 420px);">
+        <span class="ui feature__meta">Next</span>
+        <span class="headline headline--sm feature__title">{next.data.title}</span>
+        <span class="pill pill--light">view project</span>
+      </span>
+    </a>
+  </nav>
+</Base>

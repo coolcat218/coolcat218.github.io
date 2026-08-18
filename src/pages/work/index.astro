@@ -1,0 +1,43 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { workImage } from '../../lib/images';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+---
+
+<Base title="Work — Caitlin Chen" description="Projects by Caitlin Chen: AI, numerical methods, research, geometry.">
+  <section class="band statement-band">
+    <h1 class="statement reveal">Building, experimenting, learning with a few projects.</h1>
+  </section>
+
+  <section aria-label="Projects">
+    {projects.map((p) => {
+      const img = p.data.image ? workImage(p.data.image) : undefined;
+      return (
+        <a class={`feature${img && img.width >= 1000 ? '' : ' feature--plain'}`} href={`/work/${p.id}`}>
+          {img && img.width >= 1000 && (
+            <Image
+              class="feature__img"
+              src={img}
+              alt=""
+              widths={[800, 1400, 2000]}
+              width={2000}
+              sizes="100vw"
+              quality={72}
+              loading="lazy"
+            />
+          )}
+          <span class="feature__inner">
+            <span class="ui feature__meta">
+              {String(p.data.order).padStart(2, '0')} &nbsp;·&nbsp; {p.data.category}
+            </span>
+            <span class="headline feature__title">{p.data.title}</span>
+            <span class="pill pill--light">view project</span>
+          </span>
+        </a>
+      );
+    })}
+  </section>
+</Base>
