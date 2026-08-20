@@ -9,29 +9,26 @@ import portrait from '../assets/portrait.jpg';
   title="Caitlin Chen"
   description="Caitlin Chen — visual art, math, and generative AI. Based in San Francisco, previously New York."
 >
-  <!-- Portrait, with the page title and bio set against it -->
-  <div class="band">
-    <div class="duo duo--intro">
-      <figure class="duo__lead reveal" style="margin: 0;">
-        <Image
-          src={portrait}
-          alt="Portrait of Caitlin Chen"
-          widths={[420, 760, 1025]}
-          width={1025}
-          sizes="(max-width: 900px) 92vw, 46vw"
-          quality={82}
-          style="width: 100%;"
-        />
-      </figure>
+  <!-- Portrait, with the title beside it and the bio beneath, sharing its column -->
+  <div class="intro">
+    <figure class="intro__figure reveal">
+      <Image
+        src={portrait}
+        alt="Portrait of Caitlin Chen"
+        widths={[420, 760, 1025]}
+        width={1025}
+        sizes="(max-width: 900px) 92vw, 34vw"
+        quality={82}
+        style="width: 100%;"
+      />
+    </figure>
 
-      <div class="duo__body reveal d1">
-        <h1 class="statement">Hi, I'm Caitlin.</h1>
-        <p class="subtitle">Currently based in San Francisco, previously New York.</p>
-      </div>
+    <div class="intro__head reveal d1">
+      <h1 class="statement">Hi, I'm Caitlin.</h1>
+      <p class="subtitle">Currently based in San Francisco, previously New York.</p>
     </div>
 
-    <!-- Bio sits under the portrait and title, set smaller than the page's body size -->
-    <div class="intro-note reveal d2">
+    <div class="intro__body reveal d2">
       <div class="body-copy body-copy--sm">
         <p>
           I love making and looking at visual art, working my way through brainteasers, and
@@ -47,7 +44,7 @@ import portrait from '../assets/portrait.jpg';
           investment banking.
         </p>
       </div>
-      <p class="intro-note__links">
+      <p class="intro__links">
         <a class="pill" href="mailto:caitlin.chen11@gmail.com">get in touch</a>
         <a class="pill" href="/work">work</a>
         <a class="pill" href="/art">visual art</a>
