@@ -37,7 +37,7 @@ export const plates: Plate[] = [
     file: 'art-11-montauk.webp',
     title: 'End of the World, Montauk',
     year: 'August 2026',
-    alt: 'A lighthouse and clapboard houses on a grassy headland seen between dark trees, painted in blues and greens with a pale sunset over the sea',
+    alt: 'A lighthouse and clapboard houses on a grassy headland, seen between dark trees with fireflies among the leaves, painted in blues and greens under a pale sunset over the sea',
   },
   {
     file: 'art-10-seventh-ave.webp',
