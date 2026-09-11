@@ -6,6 +6,7 @@ summary: >-
   Using Euler, backward Euler, Heun's method, and RK4 to solve initial-value problems
   for ordinary differential equations.
 image: euler.png
+imageFit: contain
 imageAlt: Diagram of a draining cylindrical tank, labelled with height H, fluid level h, change in level delta-h, fluid density rho and outflow velocity v
 pdf: /pdf/euler.pdf
 tools: ['Euler', 'Backward Euler', "Heun's", 'RK4']

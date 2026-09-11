@@ -15,6 +15,8 @@ const projects = defineCollection({
     // Filename inside src/assets/work/
     image: z.string().optional(),
     imageAlt: z.string().optional(),
+    /** How the image fills its grid frame. Diagrams want `contain`; photos `cover`. */
+    imageFit: z.enum(['cover', 'contain']).default('cover'),
     /** Atmospheric image rather than a figure: no caption, empty alt. */
     imageDecorative: z.boolean().default(false),
     pdf: z.string().optional(),

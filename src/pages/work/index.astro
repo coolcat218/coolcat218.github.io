@@ -8,36 +8,38 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
 ---
 
 <Base title="Work — Caitlin Chen" description="Projects by Caitlin Chen: AI, numerical methods, research, geometry.">
-  <section class="band statement-band">
+  <section class="band statement-band" style="padding-bottom: clamp(28px, 3.5vw, 52px);">
     <h1 class="statement reveal">Building, experimenting, learning with a few projects.</h1>
+    <p class="ui ui--muted" style="margin-top: clamp(18px, 2vw, 26px);">
+      {String(projects.length).padStart(2, '0')} projects
+    </p>
   </section>
 
-  <section aria-label="Projects">
+  <!-- Uniform two-up grid: image plate, then a caption beneath. Nothing overlaid. -->
+  <div class="grid grid--2" style="padding: 0 var(--pad) clamp(50px, 8vw, 110px);">
     {projects.map((p) => {
       const img = p.data.image ? workImage(p.data.image) : undefined;
       return (
-        <a class={`feature${img && img.width >= 1000 ? '' : ' feature--plain'}`} href={`/work/${p.id}`}>
-          {img && img.width >= 1000 && (
-            <Image
-              class="feature__img"
-              src={img}
-              alt=""
-              widths={[800, 1400, 2000]}
-              width={2000}
-              sizes="100vw"
-              quality={72}
-              loading="lazy"
-            />
-          )}
-          <span class="feature__inner">
-            <span class="ui feature__meta">
-              {String(p.data.order).padStart(2, '0')} &nbsp;·&nbsp; {p.data.category}
-            </span>
-            <span class="headline feature__title">{p.data.title}</span>
-            <span class="pill pill--light">view project</span>
+        <a class="tile reveal" href={`/work/${p.id}`}>
+          <span class={`tile__frame tile__frame--16x10${p.data.imageFit === 'contain' ? ' tile__frame--contain' : ''}`}>
+            {img && (
+              <Image
+                src={img}
+                alt=""
+                widths={[600, 1000, 1400]}
+                width={1400}
+                sizes="(max-width: 700px) 100vw, 50vw"
+                quality={74}
+                loading="lazy"
+              />
+            )}
+          </span>
+          <span class="tile__cap tile__cap--stack">
+            <span class="ui ui--muted">{String(p.data.order).padStart(2, '0')} &nbsp;·&nbsp; {p.data.category}</span>
+            <span class="tile__title tile__title--lg">{p.data.title}</span>
           </span>
         </a>
       );
     })}
-  </section>
+  </div>
 </Base>

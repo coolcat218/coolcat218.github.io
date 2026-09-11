@@ -1,8 +1,21 @@
 ---
 import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import DotField from '../components/DotField.astro';
 import portrait from '../assets/portrait.jpg';
+import { plates } from '../data/art';
+import { artImage, workImage } from '../lib/images';
+
+// Lead project: the first in the index order, shown as the full-bleed feature.
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+const lead = projects[0];
+const leadImg = lead.data.image ? workImage(lead.data.image) : undefined;
+
+// Four most recent works. `plates` is already newest-first.
+const recent = plates
+  .map((pl) => ({ ...pl, img: artImage(pl.file) }))
+  .filter((pl) => pl.img)
+  .slice(0, 4);
 ---
 
 <Base
@@ -50,8 +63,53 @@ import portrait from '../assets/portrait.jpg';
     </div>
   </div>
 
-  <!-- Interactive dot field, sitting between the portrait block and the wordmark -->
-  <div class="band--sm" style="padding-top: 0;">
-    <DotField />
-  </div>
+  <!-- Lead project, full bleed, title overlaid -->
+  <a class={`feature${leadImg ? '' : ' feature--plain'}`} href={`/work/${lead.id}`}>
+    {leadImg && (
+      <Image
+        class="feature__img"
+        src={leadImg}
+        alt=""
+        widths={[800, 1400, 2000]}
+        width={2000}
+        sizes="100vw"
+        quality={72}
+        loading="lazy"
+      />
+    )}
+    <span class="feature__inner">
+      <span class="ui feature__meta">Selected work &nbsp;·&nbsp; {lead.data.category}</span>
+      <span class="headline feature__title">{lead.data.title}</span>
+      <span class="pill pill--light">view project</span>
+    </span>
+  </a>
+
+  <!-- Recent art: a row header, then a tight four-up -->
+  <section aria-labelledby="recent-art">
+    <div class="row-head">
+      <h2 id="recent-art" class="ui" style="margin: 0;">Recent work on paper and canvas</h2>
+      <a class="pill" href="/art">see all</a>
+    </div>
+    <div class="grid grid--4 grid--flush">
+      {recent.map((pl) => (
+        <a class="tile reveal" href="/art">
+          <span class="tile__frame tile__frame--3x2">
+            <Image
+              src={pl.img!}
+              alt={pl.alt}
+              widths={[420, 700, 1000]}
+              width={1000}
+              sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 25vw"
+              quality={74}
+              loading="lazy"
+            />
+          </span>
+          <span class="tile__cap">
+            <span class="tile__title">{pl.title}</span>
+            {pl.year && <span class="ui ui--muted">{pl.year}</span>}
+          </span>
+        </a>
+      ))}
+    </div>
+  </section>
 </Base>

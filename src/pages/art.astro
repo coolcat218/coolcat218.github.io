@@ -16,27 +16,31 @@ const resolved = plates
   title="Visual Art — Caitlin Chen"
   description="Drawings and paintings by Caitlin Chen — acrylic, watercolor, charcoal and pencil."
 >
-  <section class="band statement-band" style="padding-bottom: clamp(26px, 3vw, 44px);">
+  <section class="band statement-band" style="padding-bottom: clamp(28px, 3.5vw, 52px);">
     <h1 class="statement reveal">My artwork; acrylic, watercolor, charcoal and pencil.</h1>
     <p class="ui ui--muted" style="margin-top: clamp(18px, 2vw, 26px);">
       {String(resolved.length).padStart(2, '0')} works
     </p>
   </section>
 
-  <div class="plates">
+  <!-- Three-up. Every work sits whole (never cropped) on a shared baseline
+       inside an equal 4:5 cell, so rows of captions line up. -->
+  <div class="grid grid--3" style="padding: 0 var(--pad) clamp(50px, 8vw, 110px);">
     {resolved.map((pl, i) => (
-      <figure class="plate reveal">
-        <Image
-          src={pl.img!}
-          alt={pl.alt}
-          widths={[440, 780, 1200]}
-          width={1200}
-          sizes="(max-width: 700px) 92vw, 46vw"
-          quality={76}
-          loading={i < 2 ? 'eager' : 'lazy'}
-        />
-        <figcaption>
-          <span class="ui">{pl.title ?? `Plate ${String(pl.plate).padStart(2, '0')}`}</span>
+      <figure class="tile reveal" style="margin: 0;">
+        <span class="tile__frame tile__frame--4x5 tile__frame--hang">
+          <Image
+            src={pl.img!}
+            alt={pl.alt}
+            widths={[440, 780, 1200]}
+            width={1200}
+            sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw"
+            quality={76}
+            loading={i < 3 ? 'eager' : 'lazy'}
+          />
+        </span>
+        <figcaption class="tile__cap">
+          <span class="tile__title">{pl.title ?? `Plate ${String(pl.plate).padStart(2, '0')}`}</span>
           <span class="ui ui--muted">{[pl.medium, pl.year].filter(Boolean).join(' · ')}</span>
         </figcaption>
       </figure>
