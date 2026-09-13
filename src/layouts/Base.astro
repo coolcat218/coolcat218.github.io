@@ -6,13 +6,11 @@ import Footer from '../components/Footer.astro';
 interface Props {
   title: string;
   description?: string;
-  colossus?: boolean;
 }
 
 const {
   title,
   description = 'Caitlin Chen — visual art, math, and generative AI. Based in San Francisco.',
-  colossus = true,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', Astro.site).href;
@@ -50,13 +48,6 @@ const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', Astro.si
     <main id="main">
       <slot />
     </main>
-    {colossus && (
-      <svg class="colossus" viewBox="0 0 1000 124" preserveAspectRatio="xMidYMid meet" role="presentation" aria-hidden="true">
-        <text x="500" y="100" text-anchor="middle" textLength="992" lengthAdjust="spacingAndGlyphs">
-          CAITLIN CHEN
-        </text>
-      </svg>
-    )}
     <Footer />
 
     <script>
