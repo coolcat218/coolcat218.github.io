@@ -358,9 +358,10 @@ a { color: inherit; text-decoration: none; }
 }
 .colossus text {
   font-family: var(--serif);
-  font-variation-settings: 'opsz' 144, 'wght' 330, 'SOFT' 30, 'WONK' 0;
+  /* Recedes rather than shouts: lighter weight, mid grey instead of full ink. */
+  font-variation-settings: 'opsz' 144, 'wght' 290, 'SOFT' 30, 'WONK' 0;
   font-size: 120px;
-  fill: var(--ink);
+  fill: var(--ink-40);
 }
 
 /* ---------- Page title + subtitle ---------- */
